@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillGap AI | Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-5 md:p-10">
+    <div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
+        <div class="p-8 bg-indigo-700 text-white">
+            <h1 class="text-3xl font-bold">Career Pathway Analyzer</h1>
+            <p class="opacity-80">Identify gaps and map training routes</p>
+        </div>
+
+        <div class="p-8 grid md:grid-cols-2 gap-10">
+            <div>
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Set Your Profile</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600">Target Role</label>
+                        <select id="roleSelect" class="w-full mt-1 p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500">
+                            <option value="frontend-developer">Senior Frontend Developer</option>
+                            <option value="data-scientist">Data Scientist</option>
+                        </select>
+                    </div>
+                    <button onclick="analyzeSkills()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
+                        Run Analysis
+                    </button>
+                </div>
+            </div>
+
+            <div class="h-64 md:h-80">
+                <canvas id="gapChart"></canvas>
+            </div>
+        </div>
+
+        <div id="results" class="p-8 border-t border-gray-100 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Recommended Training Pathways</h2>
+            <div id="pathwayCards" class="grid md:grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        let myChart;
+
+        async function analyzeSkills() {
+            const role = document.getElementById('roleSelect').value;
+            
+            // Note: Update URL to your deployed backend URL later
+            const response = await fetch('http://localhost:3000/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    role: role,
+                    userSkills: { "React": 60, "TypeScript": 40, "System Design": 20, "Python": 30, "Cloud": 10 } 
+                })
+            });
+
+            const data = await response.json();
+            displayResults(data);
+        }
+
+        function displayResults(data) {
+            document.getElementById('results').classList.remove('hidden');
+            const container = document.getElementById('pathwayCards');
+            container.innerHTML = '';
+
+            // Update Chart
+            const ctx = document.getElementById('gapChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: data.gapSummary.map(s => s.skill),
+                    datasets: [{
+                        label: 'Gap Magnitude',
+                        data: data.gapSummary.map(s => s.gapValue),
+                        backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                        borderColor: 'rgb(79, 70, 229)',
+                    }]
+                }
+            });
+
+            // Display Pathways
+            data.roadmap.forEach(course => {
+                container.innerHTML += `
+                    <div class="p-4 border border-indigo-100 rounded-2xl bg-indigo-50/50">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">${course.skill}</span>
+                        <h3 class="font-bold text-gray-800">${course.title}</h3>
+                        <p class="text-sm text-gray-500">${course.provider}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
